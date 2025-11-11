@@ -1,0 +1,21 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{python}
+import scanpy as sc
+```
+```{python}
+adata = sc.read_h5ad("poms.annotated.dan.h5ad")
+```
+
+```{python}
+list(adata.obs.columns)
+sc.pl.umap(adata, color="basic_labels")
+sc.pl.dotplot(adata, var_names=["IGHD", "IGHM", "CD27", "MME", "CR2", "CD24"], groupby="basic_labels")
+```
+
+```{python}
+
+```
