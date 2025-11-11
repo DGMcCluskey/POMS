@@ -39,7 +39,8 @@ plt.tight_layout()
 plt.show()
 ```
 
-## save an oroginal counts layer just to be safe and then save counts as X, as this is what normalise will run on
+## we will use scvi for batch correction (variational auto encoder deep learning method)
+### set up the model, set the correct batch field
 ```{python}
 batch_key = "patient_nice"
 scvi.model.SCVI.setup_anndata(pom_b, layer="counts", batch_key=batch_key)
@@ -48,6 +49,7 @@ model_scvi = scvi.model.SCVI(pom_b)
 model_scvi.view_anndata_setup()
 ```
 
+## set how many epochs (training rounds) and then train the model - this step is time consuming
 ```{python}
 max_epochs_scvi = np.min([round((20000 / pom_b.n_obs) * 400), 400])
 print(max_epochs_scvi)
