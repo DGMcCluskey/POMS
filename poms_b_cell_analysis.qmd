@@ -1,21 +1,91 @@
----
-title: "Untitled"
-format: html
----
-
+## script to analysis the poms (only the pilot data) b cells in more detail
 ```{python}
 import scanpy as sc
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import bbknn
 ```
+
 ```{python}
 adata = sc.read_h5ad("poms.annotated.dan.h5ad")
 ```
 
+## check the dataset
 ```{python}
 list(adata.obs.columns)
 sc.pl.umap(adata, color="basic_labels")
 sc.pl.dotplot(adata, var_names=["IGHD", "IGHM", "CD27", "MME", "CR2", "CD24"], groupby="basic_labels")
 ```
 
+## subset out the b cell clusters
 ```{python}
+pom_b = adata[adata.obs["basic_labels"].isin(["Naive_B", "Memory_B", "Transitional_B"])]
+pom_b
+```
 
+## checking counts and logcounts data looks normal
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+sns.histplot(pom_b.layers["counts"].sum(1), bins=100, color="blue", ax=axes[0])
+axes[0].set_title("counts")
+
+sns.histplot(pom_b.layers["logcounts"].sum(1), bins=100, color="green", ax=axes[1])
+axes[1].set_title("logcounts")
+
+plt.tight_layout()
+plt.show()
+```
+
+## save an oroginal counts layer just to be safe and then save counts as X, as this is what normalise will run on
+```{python}
+pom_b.layers["original_counts"] = pom_b.layers["counts"].copy()
+pom_b
+pom_b.X = pom_b.layers["counts"].copy()
+```
+
+## normalise and log10 the counts
+```{python}
+sc.pp.normalize_total(pom_b, target_sum=1e4)
+sc.pp.log1p(pom_b)
+pom_b.layers['logcounts'] = pom_b.X.copy()
+```
+
+## plot distributions again
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+sns.histplot(pom_b.layers["counts"].sum(1), bins=100, color="blue", ax=axes[0])
+axes[0].set_title("counts")
+
+sns.histplot(pom_b.layers["logcounts"].sum(1), bins=100, color="green", ax=axes[1])
+axes[1].set_title("logcounts")
+
+plt.tight_layout()
+plt.show()
+```
+
+## select hvgs, perform batch correction, cluster and create umap
+```{python}
+sc.pp.highly_variable_genes(
+    pom_b, 
+    n_top_genes=2000, 
+    flavor="cell_ranger", 
+    batch_key='patient_nice', 
+    layer = 'logcounts',
+    subset = False
+)
+sc.pp.pca(pom_b)
+neighbors_within_batch = 25 if pom_b.n_obs > 100000 else 3
+bbknn.bbknn(pom_b, batch_key='patient_nice', neighbors_within_batch=neighbors_within_batch)
+sc.pp.neighbors(pom_b, n_pcs=10)
+sc.tl.umap(pom_b)
+random_indices = np.random.permutation(pom_b.shape[0])
+
+sc.pl.umap(pom_b[random_indices,:], color = 'patient_nice', s = 20)
+```
+
+```{python}
+sc.pl.umap(pom_b, color = ["IGHD", "IGHM", "CD27", "SPN", "CD38", "CD5", "CCR10"])
 ```
