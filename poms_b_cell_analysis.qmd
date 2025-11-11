@@ -41,9 +41,17 @@ plt.show()
 
 ## save an oroginal counts layer just to be safe and then save counts as X, as this is what normalise will run on
 ```{python}
-pom_b.layers["original_counts"] = pom_b.layers["counts"].copy()
+batch_key = "patient_nice"
+scvi.model.SCVI.setup_anndata(pom_b, layer="counts", batch_key=batch_key)
 pom_b
-pom_b.X = pom_b.layers["counts"].copy()
+model_scvi = scvi.model.SCVI(pom_b)
+model_scvi.view_anndata_setup()
+```
+
+```{python}
+max_epochs_scvi = np.min([round((20000 / pom_b.n_obs) * 400), 400])
+print(max_epochs_scvi)
+model_scvi.train(early_stopping=True)
 ```
 
 ## normalise and log10 the counts
