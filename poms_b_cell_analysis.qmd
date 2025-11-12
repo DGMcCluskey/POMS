@@ -5,6 +5,10 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import scvi
+import os
+import celltypist
+from celltypist import models
+import re
 ```
 
 ```{python}
@@ -56,53 +60,120 @@ print(max_epochs_scvi)
 model_scvi.train(early_stopping=True)
 ```
 
-## normalise and log10 the counts
+## asdd the scvi embedding to the object, then run clustering and plot umap
 ```{python}
-sc.pp.normalize_total(pom_b, target_sum=1e4)
-sc.pp.log1p(pom_b)
-pom_b.layers['logcounts'] = pom_b.X.copy()
-```
-
-## plot distributions again
-```{python}
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-
-sns.histplot(pom_b.layers["counts"].sum(1), bins=100, color="blue", ax=axes[0])
-axes[0].set_title("counts")
-
-sns.histplot(pom_b.layers["logcounts"].sum(1), bins=100, color="green", ax=axes[1])
-axes[1].set_title("logcounts")
-
-plt.tight_layout()
-plt.show()
-```
-
-## select hvgs, perform batch correction, cluster and create umap
-```{python}
-sc.pp.highly_variable_genes(
-    pom_b, 
-    n_top_genes=2000, 
-    flavor="cell_ranger", 
-    batch_key='patient_nice', 
-    layer = 'logcounts',
-    subset = False
-)
-sc.pp.pca(pom_b)
-sc.pl.pca_variance_ratio(pom_b, log=True, n_pcs=50)
-```
-
-```{python}
-scvi.model.SCVI.setup_anndata(pom_b, layer="counts", batch_key=batch_key)
-pom_b
-```
-
-```{python}
+pom_b.obsm["X_scANVI"] = model_scvi.get_latent_representation()
+sc.pp.neighbors(pom_b, use_rep="X_scANVI")
 sc.tl.umap(pom_b)
-random_indices = np.random.permutation(pom_b.shape[0])
+sc.pl.umap(pom_b, color=["patient_nice", "fetmat"])
+```
 
-sc.pl.umap(pom_b[random_indices,:], color = 'patient_nice', s = 20)
+```{python}
+plt.rcParams['axes.titlesize'] = 32
+sc.pl.umap(pom_b, color = ["CD19", "MS4A1", "IGHD", "IGHM", "IGHA1", "IGHA2", "IGHG1", "IGHG2", "IGHG3", "IGHG4", "CD27", "CR2", "CD24", "MME", "CXCR5", "ITGAX", "SPN", "CD38", "CD5", "CCR10"], layer = "logcounts", cmap="rocket", vmax = "p99", size = 50, legend_fontsize="small", save="_umap_markers.png")
+
+sc.pl.umap(pom_b, color = ["fetmat", "gestation_week", "patient_nice"], layer = "logcounts", cmap="magma", vmax = "p99", size = 50, legend_fontsize="large", save="_umap_metadata.png", legend_loc="right margin", ncols = 1)
+
+sc.pl.dotplot(pom_b, var_names=["IGHD", "IGHM", "IGHG1", "IGHG2", "IGHG3", "IGHG4", "IGHE", "IGHA1", "IGHA2", "CD27", "SPN", "CD38", "CD5", "CCR10"], groupby="basic_labels", save="_dotplot_markers.png")
+plt.close('all')
+```
+
+## run celltypist to see if it can find B1 cells
+### first download all models and pull out ones i want to use
+```{python}
+models.download_models(force_update = True)
+model_low = models.Model.load(model="Immune_All_Low.pkl")
+model_high = models.Model.load(model="Immune_All_High.pkl")
+model_fetal = models.Model.load(model="Pan_Fetal_Human.pkl")
+```
+
+```{python}
+print(model_low)
+print(model_high)
+print(model_fetal)
+```
+
+
+## i like to be able to see my obs columns separetly so making a df
+```{python}
+obs_df = pom_b.obs.copy()
+```
+
+```{python}
+adata_low = pom_b.copy()
+adata_high = pom_b.copy()
+adata_fetal = pom_b.copy()
+
+celltypist.annotate(adata_low, model="Immune_All_Low.pkl", majority_voting=True)
+celltypist.annotate(adata_high, model="Immune_All_High.pkl", majority_voting=True)
+celltypist.annotate(adata_fetal, model="Pan_Fetal_Human.pkl", majority_voting=True)
 ```
 ```{python}
-sc.pl.umap(pom_b, color = ["CD19", "MS4A1", "IGHD", "IGHM", "CD27", "CR2", "CD24", "MME", "CXCR5", "TBX21", "ITGAX", "SPN", "CD38", "CD5", "CCR10"], layer = "logcounts", cmap="Reds", vmax = "p99")
-sc.pl.dotplot(pom_b, var_names=["IGHD", "IGHM", "IGHG1", "IGHG2", "IGHG3", "IGHG4", "IGHE", "IGHA1", "IGHA2", "CD27", "SPN", "CD38", "CD5", "CCR10"], groupby="basic_labels")
+sc.pl.umap(adata_low, color = ["majority_voting"])
+sc.pl.umap(adata_high, color = ["majority_voting"])
+sc.pl.umap(adata_fetal, color = ["majority_voting"])
+```
+
+```{python}
+# Find all obs columns containing specific keywords
+keywords = ["celltypist", "majority_voting", "predicted_labels"]
+
+cols_to_remove = [col for col in pom_b.obs.columns if any(kw in col.lower() for kw in keywords)]
+
+# Drop them
+pom_b.obs.drop(columns=cols_to_remove, inplace=True)
+
+# Check
+print("Removed columns:", cols_to_remove)
+print("Remaining columns:", pom_b.obs.columns)
+```
+
+```{python}
+import celltypist
+import pandas as pd
+
+# Remove any old metadata columns that might interfere
+keywords = ["celltypist", "predicted_labels", "majority_voting"]
+cols_to_remove = [c for c in pom_b.obs.columns if any(kw in c.lower() for kw in keywords)]
+pom_b.obs.drop(columns=cols_to_remove, inplace=True)
+
+models_and_cols = [
+    ("Immune_All_Low.pkl", "CT_low"),
+    ("Immune_All_High.pkl", "CT_high"),
+    ("Pan_Fetal_Human.pkl", "CT_fetal")
+]
+
+for model_file, col_name in models_and_cols:
+    # Annotate and get results
+    res = celltypist.annotate(pom_b, model=model_file, majority_voting=True)
+    
+    # Extract the predicted_labels DataFrame
+    df_labels = res.predicted_labels  # this should be a pandas DataFrame
+    
+    # If majority_voting is present, you may choose to use it
+    if "majority_voting" in df_labels.columns:
+        sel = df_labels["majority_voting"]
+    else:
+        sel = df_labels["predicted_labels"]
+    
+    # Align and assign to pom_b.obs
+    pom_b.obs[col_name] = sel.reindex(pom_b.obs_names).values
+    
+    print(f"{col_name} counts:")
+    print(sel.value_counts().head())
+
+# Then you can plot
+import scanpy as sc
+sc.pl.umap(pom_b, color=[c for _, c in models_and_cols], ncols=1, palette=["darkred", "dodgerblue", "forestgreen", "orange", "darkorchid"], save="celltypist_predictions.png")
+```
+
+```{python}
+for res in [0.25, 0.5, 1,1.5,2]:
+    sc.tl.leiden(pom_b, key_added = "subclustering_res" + str(res), resolution = res)
+sc.pl.umap(
+    pom_b,
+    color=["subclustering_res0.25", "subclustering_res0.5", "subclustering_res1",
+           "subclustering_res1.5", "subclustering_res2"], 
+    size = 50, legend_fontsize="x-large"
+)
 ```
