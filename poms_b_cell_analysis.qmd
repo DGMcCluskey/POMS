@@ -168,12 +168,20 @@ sc.pl.umap(pom_b, color=[c for _, c in models_and_cols], ncols=1, palette=["dark
 ```
 
 ```{python}
-for res in [0.25, 0.5, 1,1.5,2]:
+for res in [0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.5,2]:
     sc.tl.leiden(pom_b, key_added = "subclustering_res" + str(res), resolution = res)
+
+```
+
+```{python}
 sc.pl.umap(
     pom_b,
-    color=["subclustering_res0.25", "subclustering_res0.5", "subclustering_res1",
-           "subclustering_res1.5", "subclustering_res2"], 
-    size = 50, legend_fontsize="x-large"
+    color=["subclustering_res0.25", "subclustering_res0.5", "subclustering_res0.7", "subclustering_res1"], 
+    size = 50, legend_fontsize="x-large", save="_resolutions.png", ncols=2
 )
+```
+
+```{python}
+sc.pl.dotplot(pom_b, var_names=["IGHD", "IGHM", "IGHG1", "IGHG2", "IGHG3", "IGHG4", "IGHE", "IGHA1", "IGHA2", "CD27", "SPN", "CD38", "CD5", "CCR10", "CR2", "CD24", "CXCR5", "ITGAX", "TBX21", "FAS"], standard_scale="var", dendrogram = True, swap_axes=True,
+groupby="subclustering_res0.7", save="_resolution_0.7.dotplot_markers.png")
 ```
