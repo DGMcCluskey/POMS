@@ -163,6 +163,56 @@ groupby="subclustering_res0.7", save="_resolution_0.7.dotplot_markers.png")
 ``` 
 
 ## assessing abundances
+
+```{python}
+# Step 1: count cells per patient and label
+counts = (
+    pom_b.obs
+    .groupby(["patient_nice", "CT_fetal"])
+    .size()
+    .reset_index(name="count")
+)
+
+# Step 2: get each patient’s unique gestational week
+gestation_map = pom_b.obs[["patient_nice", "gestation_week", "fetmat"]].drop_duplicates()
+
+# Step 3: merge gestation back in
+counts = counts.merge(gestation_map, on="patient_nice", how="left")
+
+# Step 4: calculate proportions per patient
+counts["proportion"] = counts.groupby("patient_nice")["count"].transform(lambda x: x / x.sum())
+counts["percentage"] = counts["proportion"]*100
+```
+
+## plot propotions
+```{python}
+sns.set_context("talk", font_scale=1.2)
+plt.figure()
+sns.catplot(data=counts,x="fetmat",y="percentage",hue="fetmat", kind="box", col ="CT_fetal",sharey=False,col_wrap=2,height=4,aspect=1.5, palette=["mediumseagreen", "mediumpurple"])
+plt.show()
+
+plt.figure()
+sns.relplot(data=counts,x="gestation_week",y="percentage",hue="fetmat",col="CT_fetal",kind="scatter",facet_kws=dict(sharey=False),col_wrap=2, palette=["mediumseagreen", "mediumpurple"])
+plt.show()
+plt.figure()
+reg_plot = sns.lmplot(
+    data=counts,
+    x="gestation_week",
+    y="percentage",
+    col="CT_fetal",
+    col_wrap=2,
+    hue="fetmat",
+    markers=["o", "s"],
+    palette=["mediumseagreen", "mediumpurple"],
+    height=5,
+    aspect=1.5,
+    facet_kws=dict(sharey=False),
+    ci=None,
+    
+)
+plt.show()
+reg_plot.savefig("proportion_over_time.png")
+```
 ```{python}
 sccoda_model = pt.tl.Sccoda()
 sccoda_data = sccoda_model.load(
