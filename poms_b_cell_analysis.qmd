@@ -144,18 +144,19 @@ sc.pl.umap(pom_b, color=[c for _, c in models_and_cols], ncols=1, palette=["dark
 
 ## calculate clusters at different resolutions
 ```{python}
-for res in [0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.5,2]:
-    sc.tl.leiden(pom_b, key_added = "subclustering_res" + str(res), resolution = res)
-
+for res in [0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,2]:
+    sc.tl.leiden(pom_fetal, key_added = "leiden_res_" + str(res), resolution = res)
 ```
 
 ## visualise resolutions
 ```{python}
+plt.figure(figsize=(5,5))
 sc.pl.umap(
     pom_b,
-    color=["subclustering_res0.25", "subclustering_res0.5", "subclustering_res0.7", "subclustering_res1"], 
-    size = 50, legend_fontsize="x-large", save="_resolutions.png", ncols=2
+    color=["leiden_res_0.25", "leiden_res_0.5", "leiden_res_1", "leiden_res_1.5"], 
+    size = 50, legend_fontsize="x-large", ncols=2
 )
+plt.
 ```
 
 ## plot some markers to see how expression looks at a certain resolition
