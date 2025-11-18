@@ -247,17 +247,33 @@ plt.savefig("celltypist_predictions.png",dpi=300, bbox_inches="tight")
 
 ## run leiden clustering
 ```{python}
- or res in [0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,2]:
+ for res in [0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2]:
     sc.tl.leiden(pom_fetal, key_added = "leiden_res_" + str(res), resolution = res)
 ```
 
+## view various resolutions
 ```{python}
-plt.figure(figsize=(5,5))
+plt.figure(figsize=(5,10))
 sc.pl.umap(
-    pom_b,
-    color=["leiden_res_0.25", "leiden_res_0.5", "leiden_res_1", "leiden_res_1.5"], 
-    size = 50, legend_fontsize="x-large", ncols=2
+    pom_fetal,
+    color=["leiden_res_1.1", "leiden_res_1.2", "leiden_res_1.3",
+     "leiden_res_1.4", "leiden_res_1.5", "leiden_res_1.6", "leiden_res_1.7",
+     "leiden_res_1.8", "leiden_res_1.9", "leiden_res_2"], 
+    size = 50, legend_fontsize="x-large", ncols=5
 )
 plt.tight_layout()
 plt.savefig("clustering_resolutions.png", dpi=300, bbox_inches="tight")
+```
+
+## plot some key marker genes to get an idea of what celltypes lie where
+```{python}
+key_genes = ["CD3D", "CD4", "CD8A", "CCR7", "SELL", "FOXP3", "NKG7", "GZMK", "NCAM1", "CD19", "IGHD", "CD27", "CD38", "MME", "CD5", "CCR10", "SPN", "LYZ", "CD14", "FCGR3A", "CXCR4", "CCR2", "IL1B", "CD1C", "IRF7", "CD34", "TRDV2", "KLRB1", "PPBP", "HBB"]
+plt.figure(figsize=(10,10))
+sc.pl.umap(
+    pom_fetal, ncols=5,
+    color=key_genes, 
+    size = 30, layer = "logcounts", cmap="magma"
+)
+plt.tight_layout()
+plt.savefig("UMAP_key_markers.png", dpi=300, bbox_inches="tight")
 ```
