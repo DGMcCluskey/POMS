@@ -58,6 +58,61 @@ plt.show()
 plt.savefig("POMS_QC_postfiltering.png", dpi=300)
 ```
 
+## at this point i also extract all of the obs into a df so i can inspect it and check what the data has
+### for example im checking how many cells belong to each patient and in which pool they belong
 ```{python}
+obs_df = adata.obs.copy()
+counts = obs_df.groupby(['poolID', 'patient_nice']).size().reset_index(name='n_cells')
+counts_actual = counts[counts['n_cells'] > 0]
+plt.figure()
+sns.barplot(data=counts_actual, x='poolID', y='n_cells', hue='patient_nice')
+```
 
+## this showed me that there are some duplicate pools, or a situation where a patient was sequencing across two pools, therefore i will rename these to make them usable for batch correction by moving these into one combined pool
+```{python}
+adata.obs["pool_new"] = adata.obs["poolID"].map(
+    {
+    "sc12":"sc12_13",
+    "sc13":"sc12_13",
+    "sc14":"sc14_15",
+    "sc15":"sc14_15",
+    "sc16":"sc16_17",
+    "sc17":"sc16_17",
+    "sc18":"sc18_19",
+    "sc19":"sc18_19",
+    "Pool_3":"Pool_3",
+    "Pool_4":"Pool_4",
+    }
+)
+new_counts = adata.obs.groupby(['pool_new', 'patient_nice']).size().reset_index(name='n_cells')
+```
+
+## we want to analyse fetal samples separately, so pulling out and re-running processing
+```{python}
+pom_fetal = adata[adata.obs["fetmat"].isin(["Fetal"])].copy()
+del adata
+pom_fetal.obs["fetmat"].value_counts()
+```
+
+## make sure X is set to the counts and then normalise, before saving the logcounts again
+```{python}
+pom_fetal.X = pom_fetal.layers["counts"].copy()
+sc.pp.normalize_total(pom_fetal)
+sc.pp.log1p(pom_fetal)
+pom_fetal.layers["logcounts"] = pom_fetal.X.copy()
+```
+
+## before batch correction, let's assess the state of the umap to see how strong the effects are by running the basic pipeline
+```{python}
+sc.pp.highly_variable_genes(pom_fetal)
+sc.tl.pca(pom_fetal)
+sc.pp.neighbors(pom_fetal)
+sc.tl.umap(pom_fetal)
+pom_fetal
+```
+
+## huge batch effects are seen
+```{python}
+plt.figure()
+sc.pl.umap(pom_fetal, color=["pool_new"], wspace=1,show=True, save="UMAP_uncorrected.png")
 ```
