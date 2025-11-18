@@ -323,35 +323,60 @@ sc.pl.rank_genes_groups_dotplot(
     pom_fetal, groupby="leiden_res_1.6", standard_scale="var", n_genes=5, key="dea_res_1.6_b_clusters"
 )
 ```
+
 ## build the annotation dictionary (you will keep coming back here to tweak things!)
 ```{python}
 pom_fetal.obs["labels"] = pom_fetal.obs["leiden_res_1.6"].map(
     {
         "0": "B_naive",
         "1": "CD8+T_naive",
-        "2": "_",
-        "3": "_",
+        "2": "CD4+T_naive",
+        "3": "CD4+T_naive",
         "4": "CD8+T_naive",
-        "5": "_",
-        "6": "_",
-        "7": "_",
-        "8": "_",
-        "9": "_",
+        "5": "CD4+T_naive",
+        "6": "B_naive",
+        "7": "CD4+T_naive",
+        "8": "CD4+T_naive",
+        "9": "CD4+T_naive",
         "10": "Monocyte",
         "11": "NK",
         "12": "Treg",
-        "13": "_",
-        "14": "_",
-        "15": "_",
-        "16": "_",
+        "13": "CD4+T_naive",
+        "14": "CD4+T_naive",
+        "15": "CD4+T_naive",
+        "16": "ILC_CCR6+",
         "17": "B_B1",
         "18": "CD8+T_memory/ILC",
-        "19": "_",
+        "19": "ILC",
         "20": "HSC",
-        "21": "_",
+        "21": "CD4+T_naive",
         "22": "DC",
         "23": "RBC",
         "24": "Platelet",
     }
 )
+```
+
+## annotated umap
+```{python}
+cluster_palette = ["limegreen", "darkgreen", "cornflowerblue", "darkred", "indianred", "goldenrod", "black", "darkorchid", "slateblue", "orange", "deeppink", "darkgrey", "slategrey","blue"]
+plt.figure(figsize=(10,10))
+sc.pl.umap(pom_fetal, color="labels", size=30, legend_loc="on data", frameon=False,show=False,
+palette=cluster_palette, legend_fontoutline=2, legend_fontsize= "small", title="Annotated UMAP")
+plt.savefig("UMAP_annoated.png", dpi=300)
+plt.show()
+
+label_genes = ["CD3D", "CD4", "CD8A", "CCR7", "SELL", "FOXP3", "CTLA4", "KLRB1", "CCR6", "NCAM1", "NKG7", "GZMB", "GZMK", "CD19", "IGHD", "IGHM", "TCL1A", "CR2", "CD5", "LYZ", "CD14", "FCGR3A", "CD1C", "IRF7", "TRDV2", "CD34", "PPBP", "HBB"]
+
+plt.figure(figsize=(5,8))
+sc.pl.stacked_violin(pom_fetal, var_names=label_genes, groupby = "labels",
+                     use_raw=False, layer="logcounts", stripplot = False,
+                     row_palette=cluster_palette,show=False)
+plt.savefig("violin_annotated.png", dpi=300)
+plt.show()
+```
+
+## save/reload object here
+```{python}
+pom_fetal.write(filename="POMS_fetal_batch1-6_annoated.h5ad")
 ```
