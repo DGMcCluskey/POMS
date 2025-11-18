@@ -284,6 +284,8 @@ plt.figure()
 sc.pl.umap(pom_fetal, color="leiden_res_1.6", size=30, legend_loc="on data")
 plt.savefig("UMAP_res_1.6.png", dpi=300)
 sc.pl.dotplot(pom_fetal, groupby="leiden_res_1.6", var_names=key_genes, standard_scale="var")
+sc.pl.stacked_violin(pom_fetal, var_names=key_genes, groupby = "leiden_res_1.6",
+                     use_raw=False, layer="logcounts", stripplot = False)
 ```
 
 ## calculate DEGs for each cluster at the 1.6 resolution and plot them
@@ -294,7 +296,42 @@ sc.tl.rank_genes_groups(
 ```
 
 ```{python}
+plt.figure()
 sc.pl.rank_genes_groups_dotplot(
     pom_fetal, groupby="leiden_res_1.6", standard_scale="var", n_genes=5, key="dea_res_1.6"
+)
+plt.savefig("dotplot_degs_res_1.6.png", dpi=300)
+```
+
+## build the annotation dictionary (you will keep coming back here to tweak things!)
+```{python}
+pom_fetal.obs["labels"] = pom_fetal.obs["leiden_res_1.6"].map(
+    {
+        "0": "_",
+        "1": "_",
+        "2": "_",
+        "3": "_",
+        "4": "_",
+        "5": "_",
+        "6": "_",
+        "7": "_",
+        "8": "_",
+        "9": "_",
+        "10": "_",
+        "11": "_",
+        "12": "_",
+        "13": "_",
+        "14": "_",
+        "15": "_",
+        "16": "_",
+        "17": "_",
+        "18": "_",
+        "19": "_",
+        "20": "_",
+        "21": "_",
+        "22": "_",
+        "23": "_",
+        "24": "_",
+    }
 )
 ```
