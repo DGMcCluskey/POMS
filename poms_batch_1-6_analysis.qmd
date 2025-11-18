@@ -113,6 +113,8 @@ pom_fetal
 
 ## huge batch effects are seen
 ```{python}
-plt.figure()
-sc.pl.umap(pom_fetal, color=["pool_new"], wspace=1,show=True, save="UMAP_uncorrected.png")
+plt.figure(figsize=(20,15))
+sc.pl.umap(pom_fetal, color=["pool_new"], wspace=1,show=True)
+plt.tight_layout()
+plt.savefig("UMAP_uncorrected.png",dpi=300)
 ```
