@@ -118,3 +118,43 @@ sc.pl.umap(pom_fetal, color=["pool_new"], wspace=1,show=True)
 plt.tight_layout()
 plt.savefig("UMAP_uncorrected.png",dpi=300)
 ```
+
+## first corrective step is to perform batch-aware hvg selection - scanpy has this built in
+```{python}
+sc.pp.highly_variable_genes(
+    pom_fetal, n_top_genes=2000, flavor="cell_ranger", batch_key="pool_new"
+)
+pom_fetal.var
+```
+```{python}
+plt.figure()
+n_batches = pom_fetal.var["highly_variable_nbatches"].value_counts()
+ax = n_batches.plot(kind="bar")
+n_batches
+```
+
+## data is then subetted to the hvgs for scvi to be run on - the embeddings will be added back to the full data later
+```{python}
+pom_hvg = pom_fetal[:, pom_fetal.var["highly_variable"]].copy()
+pom_hvg
+```
+
+## set up the scvi model
+```{python}
+scvi.model.SCVI.setup_anndata(pom_hvg, layer="counts", batch_key="pool_new")
+pom_hvg
+model_scvi = scvi.model.SCVI(pom_hvg)
+model_scvi
+model_scvi.view_anndata_setup()
+```
+
+## automatically calculate the epoch number (eopchs = number of interations the model performs)
+```{python}
+max_epochs_scvi = np.min([round((20000 / pom_fetal.n_obs) * 400), 400])
+max_epochs_scvi
+```
+
+## run the model
+```{python}
+model_scvi.train()
+```
