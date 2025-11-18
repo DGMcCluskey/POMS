@@ -10,6 +10,8 @@ import celltypist
 from celltypist import models
 import re
 import pertpy as pt
+import muon as mu
+import mudata as md
 ```
 
 ```{python}

@@ -1,0 +1,29 @@
+# POMS latest analysis
+## analysing the poms 1-6 batches dataset
+```{python}
+import scanpy as sc
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scvi
+import os
+import celltypist
+from celltypist import models
+import re
+import pertpy as pt
+import muon as mu
+import mudata as md
+import sys
+```
+
+```{python}
+adata = mu.read(filename = "mudata_poms1-6_adtSoupX.h5mu/rna")
+adata
+(sys.getsizeof(adata) / (1024**3))
+```
+
+```{python}
+sc.pl.violin(adata, "pct_counts_mt")
+sc.pl.violin(adata, "pct_counts_ribo")
+sc.pl.violin(adata, "pct_counts_hb")
+```
