@@ -5,6 +5,7 @@ import scanpy as sc
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import scvi
 import os
 import celltypist
@@ -16,14 +17,47 @@ import mudata as md
 import sys
 ```
 
+## load in just the RNA element of the data (will come back to the surface Ab data)
+### checking size of object to get a rough idea of what I'm dealing with
 ```{python}
 adata = mu.read(filename = "mudata_poms1-6_adtSoupX.h5mu/rna")
 adata
 (sys.getsizeof(adata) / (1024**3))
 ```
 
+## appears Tim has already done some preliminary analysis, so checking the QC metrics to confirm data is filtered
+## i also check counts, logcounts and X to confirm normalisation and where the raw data is
 ```{python}
-sc.pl.violin(adata, "pct_counts_mt")
-sc.pl.violin(adata, "pct_counts_ribo")
-sc.pl.violin(adata, "pct_counts_hb")
+fig = plt.figure(figsize=(12,8))
+
+# Define a GridSpec with 6 equal-width units
+gs = gridspec.GridSpec(2, 6, height_ratios=[1,1.2], figure=fig)
+
+# Top row: 3 violins, each spans 2 units (so all equal width)
+ax1 = fig.add_subplot(gs[0, 0:2])
+ax2 = fig.add_subplot(gs[0, 2:4])
+ax3 = fig.add_subplot(gs[0, 4:6])
+
+sc.pl.violin(adata, "pct_counts_mt", ax=ax1, show=False, stripplot=False)
+sc.pl.violin(adata, "pct_counts_ribo", ax=ax2, show=False, stripplot=False)
+sc.pl.violin(adata, "pct_counts_hb", ax=ax3, show=False, stripplot=False)
+
+# Bottom row: 2 histograms, each spans 3 units (1.5 of the top-row plots)
+ax4 = fig.add_subplot(gs[1, 0:3])
+ax5 = fig.add_subplot(gs[1, 3:6])
+
+sns.histplot(np.sum(adata.layers["counts"], axis=1), bins=100, color="blue", ax=ax4)
+ax4.set_title("Counts")
+
+sns.histplot(np.sum(adata.layers["logcounts"], axis=1), bins=100, color="red", ax=ax5)
+ax5.set_title("Logcounts")
+
+plt.tight_layout()
+plt.show()
+
+plt.savefig("POMS_QC_postfiltering.png", dpi=300)
+```
+
+```{python}
+
 ```
