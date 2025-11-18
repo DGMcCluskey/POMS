@@ -267,11 +267,11 @@ plt.savefig("clustering_resolutions.png", dpi=300, bbox_inches="tight")
 
 ## plot some key marker genes to get an idea of what celltypes lie where
 ```{python}
-key_genes = ["PRDM1", "CD3D", "CD4", "CD8A", "CCR7", "SELL", "FOXP3", "CTLA4", "NKG7", "GZMB", "GZMK", "NCAM1", "CD19", "IGHD", "IGHM", "CD27", "CD38", "MME", "CD5", "CCR10", "SPN", "LYZ", "CD14", "FCGR3A", "CXCR4", "CCR2", "IL1B", "CD1C", "IRF7", "CD34", "TRDV2", "KLRB1", "MKI67", "PPBP", "HBB"]
-plt.figure(figsize=(10,12))
+key_genes = ["PRDM1", "CD3D", "CD4", "CD8A", "CCR7", "SELL", "FOXP3", "CTLA4", "NKG7", "GZMB", "GZMK", "NCAM1", "CD19", "IGHD", "IGHM", "TCL1A", "CR2", "CD24", "CD27", "CD38", "MME", "IL10", "CD5", "SPN", "LYZ", "CD14", "FCGR3A", "CD1C", "IRF7", "CD34", "TRDV2", "KLRB1", "MKI67", "PPBP", "HBB"]
+plt.figure(figsize=(20,24))
 sc.pl.umap(
-    pom_fetal, ncols=5,
-    color=key_genes, 
+    pom_fetal, ncols=7,
+    color=key_genes, sort_order=False, vmax="p99",
     size = 30, layer = "logcounts", cmap="magma"
 )
 plt.tight_layout()
@@ -284,8 +284,10 @@ plt.figure()
 sc.pl.umap(pom_fetal, color="leiden_res_1.6", size=30, legend_loc="on data")
 plt.savefig("UMAP_res_1.6.png", dpi=300)
 sc.pl.dotplot(pom_fetal, groupby="leiden_res_1.6", var_names=key_genes, standard_scale="var")
+plt.figure()
 sc.pl.stacked_violin(pom_fetal, var_names=key_genes, groupby = "leiden_res_1.6",
                      use_raw=False, layer="logcounts", stripplot = False)
+plt.savefig("violin_key_markers.png", dpi=300)
 ```
 
 ## calculate DEGs for each cluster at the 1.6 resolution and plot them
@@ -303,35 +305,53 @@ sc.pl.rank_genes_groups_dotplot(
 plt.savefig("dotplot_degs_res_1.6.png", dpi=300)
 ```
 
+## given the complexity of the t cells, I'll make a separate violin plot focusing on T cell markers
+```{python}
+t_genes = ["CD3D", "CD4", "CD8A", "CCR7", "SELL", "CD27", "CD28", "IL7R", "TBX21", "GATA3", "RORC", "FOXP3", "CTLA4", "GZMB", "GZMK", "CCR4", "CCR6", "CXCR3", "CD69", "ITGAE", "FAS", "IL2RA"]
+plt.figure()
+sc.pl.stacked_violin(pom_fetal, var_names=t_genes, groupby = "leiden_res_1.6",
+                     use_raw=False, layer="logcounts", stripplot = False)
+plt.savefig("violin_T_cell_markers.png", dpi=300)
+```
+
+## also running the dea on suspected B cell clusters to see whats different about them
+```{python}
+sc.tl.rank_genes_groups(
+    pom_fetal, groupby="leiden_res_1.6", groups=["0", "6", "17"], reference= "0", method="wilcoxon", key_added="dea_res_1.6_b_clusters"
+)
+sc.pl.rank_genes_groups_dotplot(
+    pom_fetal, groupby="leiden_res_1.6", standard_scale="var", n_genes=5, key="dea_res_1.6_b_clusters"
+)
+```
 ## build the annotation dictionary (you will keep coming back here to tweak things!)
 ```{python}
 pom_fetal.obs["labels"] = pom_fetal.obs["leiden_res_1.6"].map(
     {
-        "0": "_",
-        "1": "_",
+        "0": "B_naive",
+        "1": "CD8+T_naive",
         "2": "_",
         "3": "_",
-        "4": "_",
+        "4": "CD8+T_naive",
         "5": "_",
         "6": "_",
         "7": "_",
         "8": "_",
         "9": "_",
-        "10": "_",
-        "11": "_",
-        "12": "_",
+        "10": "Monocyte",
+        "11": "NK",
+        "12": "Treg",
         "13": "_",
         "14": "_",
         "15": "_",
         "16": "_",
-        "17": "_",
-        "18": "_",
+        "17": "B_B1",
+        "18": "CD8+T_memory/ILC",
         "19": "_",
-        "20": "_",
+        "20": "HSC",
         "21": "_",
-        "22": "_",
-        "23": "_",
-        "24": "_",
+        "22": "DC",
+        "23": "RBC",
+        "24": "Platelet",
     }
 )
 ```
