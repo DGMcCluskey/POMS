@@ -18,6 +18,7 @@ import sys
 import torch
 import pandas as pd
 from plotnine import *
+from scipy.stats import f_oneway
 ```
 
 ## load in just the RNA element of the data (will come back to the surface Ab data)
@@ -483,9 +484,75 @@ plt.show()
 ## note here i have started using the plotnine package, which utilises ggplot from R (which is the GOAT of data visualisation)
 ## i'll go back at some point and update other plots
 ```{python}
-plt.figure()
-sns.catplot(data=proportions_df,x="gestation_binned",y="percentage",kind="box", hue="gestation_binned", palette="vlag",col="cluster", col_wrap=4, facet_kws=dict(sharey=False))
-plt.savefig("proportions_binned.png", dpi=300)
-plt.show()
+p = (
+    ggplot(proportions_df, aes(x="gestation_binned", y = "percentage", fill = "gestation_binned"))+
+    theme_bw()+facet_wrap("cluster", scales="free_y")+geom_boxplot(alpha=0.5, outlier_alpha=0)+scale_fill_manual(values=("red", "darkorchid", "steelblue"))+geom_jitter(alpha=0.3, width=0.1)+theme(axis_text_x=element_text(angle=45, hjust=1))
+)
+p.show()
+p.save("proportions_binned.png", dpi=300, width=10,height=8)
+```
 
+## run tukey hsd on binned proportions
+```{python}
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+
+tukey_results = []
+
+for cluster_name, df_cluster in proportions_df.groupby("cluster"):
+    tukey = pairwise_tukeyhsd(
+        endog=df_cluster["percentage"],        # values
+        groups=df_cluster["gestation_binned"], # group labels
+        alpha=0.05
+    )
+    
+    # Convert results to a DataFrame
+    df_res = pd.DataFrame(data=tukey._results_table.data[1:], columns=tukey._results_table.data[0])
+    df_res["cluster"] = cluster_name
+    tukey_results.append(df_res)
+
+tukey_df = pd.concat(tukey_results, ignore_index=True)
+print(tukey_df)
+
+```
+
+## differential expression analysis
+## run DEA for each cluster, comparing <25_pgw against all other groups
+```{python}
+from itertools import product
+
+# Store results
+de_results = []
+
+cluster_key = "labels"
+groupby_key = "gestation_binned"
+
+for cluster in pom_fetal.obs[cluster_key].cat.categories:
+    # Subset adata to this cluster
+    adata_cluster = pom_fetal[pom_fetal.obs[cluster_key] == cluster].copy()
+    
+    # Run DE across gestation bins
+    sc.tl.rank_genes_groups(adata_cluster, groupby=groupby_key, gr5oups="<25_pgw", method="t-test_overestim_var")
+    
+    # Collect results for each group within this cluster
+    for group in adata_cluster.obs[groupby_key].cat.categories:
+        df = sc.get.rank_genes_groups_df(adata_cluster, group=group)
+        df["cluster"] = cluster
+        de_results.append(df)
+
+# Concatenate into a single dataframe
+de_results_df = pd.concat(de_results, ignore_index=True)
+
+print(de_results_df.head())
+
+```
+
+
+```{python}
+de_results_df["neg_log10_p"] = -np.log10(de_results_df["pvals_adj"])
+p= (
+    ggplot(de_results_df, aes(x="logfoldchanges", y = "neg_log10_p"))+geom_point()+
+    theme_bw()+facet_wrap("cluster", ncol=4)
+    )
+p.show()
+p.save("DEA_volcanos.png", dpi=300, height=10,width=10)
 ```
