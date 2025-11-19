@@ -16,6 +16,8 @@ import muon as mu
 import mudata as md
 import sys
 import torch
+import pandas as pd
+from plotnine import *
 ```
 
 ## load in just the RNA element of the data (will come back to the surface Ab data)
@@ -379,4 +381,111 @@ plt.show()
 ## save/reload object here
 ```{python}
 pom_fetal.write(filename="POMS_fetal_batch1-6_annoated.h5ad")
+```
+
+## assess cluster proportions over time
+## first we'll use gestaional week and perform linear regressions and aftwerwards we'll bin them into categories
+## adding a categorical, binned gestation column for further comparisons
+```{python}
+pom_fetal.obs["gestation_binned"] = pom_fetal.obs["gestation_week"].map(
+    {
+        23.4: "<25_pgw",
+        23.6: "<25_pgw",
+        23.7: "<25_pgw",
+        24.1: "<25_pgw",
+        24.4: "<25_pgw",
+        25.0: "<28_pgw",
+        25.3: "<28_pgw",
+        25.4: "<28_pgw",
+        26.9: "<28_pgw",
+        27.3: "<28_pgw",
+        29.6: ">28_pgw",
+        32.7: ">28_pgw",
+        33.1: ">28_pgw",
+        35.9: ">28_pgw"
+    }
+)
+```
+
+## visualising UMAPs over time to support these findings
+```{python}
+plt.figure()
+for bin_name in pom_fetal.obs['gestation_binned'].unique():
+    sc.pl.umap(
+        pom_fetal[pom_fetal.obs['gestation_binned'] == bin_name, :],
+        color='labels',
+        size=30, show=False,
+        palette=cluster_palette,
+        title=f"UMAP {bin_name}"
+    )
+plt.savefig("UMAP_by_gestation.png", dpi=300)
+plt.show()
+```
+
+## pull out data into a df
+```{python}
+cluster_key = "labels"
+sample_key = "patient_nice"
+
+counts = (
+    pom_fetal.obs
+        .groupby([sample_key, cluster_key])
+        .size()
+        .unstack(fill_value=0)
+)
+
+proportions = (counts.div(counts.sum(axis=1), axis=0)*100)
+
+patient_meta_cols = ["gestation_week", "gestation_binned"]
+
+patient_meta = (
+    pom_fetal.obs[[sample_key] + patient_meta_cols]
+    .drop_duplicates(subset=sample_key)
+    .set_index(sample_key)
+)
+
+proportions_df = pd.concat([patient_meta,proportions], axis=1)
+
+proportions_df.index.name = "sample_id"
+proportions_df = proportions_df.reset_index()
+proportions_df = pd.melt(proportions_df, id_vars=["sample_id","gestation_week", "gestation_binned"], value_vars=proportions_df.columns[3:17], var_name="cluster", value_name="percentage")
+
+```
+
+```{python}
+plt.figure()
+reg_plot = sns.lmplot(
+    data=proportions_df,
+    x="gestation_week",
+    y="percentage",
+    col="cluster",
+    col_wrap=4,
+    hue="cluster",
+    palette=cluster_palette,
+    height=5,
+    aspect=1.5,
+    facet_kws=dict(sharey=False),
+    ci=None,
+    scatter_kws={'s': 100},
+    line_kws={'linewidth': 5}
+    
+)
+
+reg_plot.set_titles(col_template="{col_name}", size=24)
+reg_plot.set_xlabels(fontsize=24)
+reg_plot.set_ylabels(fontsize=24)
+reg_plot.savefig("proportions_by_gestation.png", dpi=300)  
+plt.show()
+```
+
+
+## boxplots
+## note here i have started using the plotnine package, which utilises ggplot from R (which is the GOAT of data visualisation)
+## i'll go back at some point and update other plots
+```{python}
+plt.figure()
+sns.catplot(data=proportions_df,x="gestation_binned",y="percentage",kind="box", hue="gestation_binned", palette="vlag",col="cluster", col_wrap=4, facet_kws=dict(sharey=False))
+plt.savefig("proportions_binned.png", dpi=300)
+plt.show()
+
 ```
