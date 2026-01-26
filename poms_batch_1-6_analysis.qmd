@@ -381,7 +381,8 @@ plt.show()
 
 ## save/reload object here
 ```{python}
-pom_fetal.write(filename="POMS_fetal_batch1-6_annoated.h5ad")
+#pom_fetal.write(filename="POMS_fetal_batch1-6_annoated.h5ad")
+pom_fetal = sc.read_h5ad("POMS_fetal_batch1-6_annoated.h5ad")
 ```
 
 ## assess cluster proportions over time
@@ -555,4 +556,134 @@ p= (
     )
 p.show()
 p.save("DEA_volcanos.png", dpi=300, height=10,width=10)
+```
+
+# B CELL FOCUS - PLOTTING UMAP WITH B CELL SUBSET GENES
+```{python}
+key_genes = ["CD19", "CD79A", "IGHD", "IGHM", "CD27", "CD24", "CR2", "SPN", "CD38", "TCL1A", "SELL", "MME"]
+plt.figure(figsize=(20,24))
+sc.pl.umap(
+    pom_fetal, ncols=3,
+    color=key_genes, sort_order=False, vmax="p99",
+    size = 20, layer = "logcounts", cmap="magma"
+)
+plt.tight_layout()
+plt.savefig("POMS_UMAP_B_cell_genes.png",dpi=300)
+```
+
+### pull out b cell populations and inspect CD27 expression
+```{python}
+pom_b = pom_fetal[pom_fetal.obs["labels"].isin(["B_naive", "B_B1"])].copy()
+```
+
+```{python}
+sc.pl.violin(pom_b, groupby="patient_nice", keys=["CD27"], rotation=90, layer="logcounts", use_raw=False)
+```
+
+```{python}
+sc.pl.scatter(pom_b, x="CD27",y="IGHD",color="labels", layers="logcounts", use_raw=False)
+```
+
+```{python}
+pom_b.obs["CD27pos_IGHDneg"] = (
+    (pom_b[:, "CD27"].layers["logcounts"].toarray().ravel() > 0) &
+    (pom_b[:, "IGHD"].layers["logcounts"].toarray().ravel() == 0)
+)
+pom_b.obs["CD27pos_IGHDneg"].mean() * 100
+```
+
+```{python}
+sc.pl.umap(pom_b, color="CD27pos_IGHDneg", size = 30)
+```
+
+```{python}
+per_sample_pct = (
+    pom_b.obs
+    .groupby("patient_nice")["CD27pos_IGHDneg"]
+    .mean() * 100
+)
+
+per_sample_pct
+```
+
+# B CELL SUBCLUSTERING
+```{python}
+pom_fetal = sc.read_h5ad("POMS_fetal_batch1-6_annoated.h5ad")
+```
+```{python}
+pom_b = pom_fetal[pom_fetal.obs["labels"].isin(["B_naive", "B_B1"])].copy()
+pom_b
+del pom_fetal
+```
+
+### check correct cells left
+```{python}
+sc.pl.umap(pom_b, color = ["labels", "pool_new"])
+```
+
+### run hvg, batch correction and clustering again
+```{python}
+sc.pp.highly_variable_genes(
+    pom_b, 
+    n_top_genes=2000, 
+    flavor="cell_ranger", 
+    batch_key='pool_new', 
+    layer = 'logcounts',
+    subset = False
+)
+b_hvg = pom_b[:, pom_b.var["highly_variable"]].copy()
+b_hvg
+```
+
+```{python}
+scvi.model.SCVI.setup_anndata(b_hvg, layer="counts", batch_key="pool_new")
+b_hvg
+model_scvi = scvi.model.SCVI(b_hvg)
+model_scvi
+model_scvi.view_anndata_setup()
+max_epochs_scvi = np.min([round((20000 / pom_b.n_obs) * 400), 400])
+max_epochs_scvi
+```
+
+```{python}
+model_scvi.train()
+```
+
+```{python}
+pom_b.obsm["X_scVI"] = model_scvi.get_latent_representation()
+sc.pp.neighbors(pom_b, use_rep="X_scVI")
+sc.tl.umap(pom_b)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(pom_b, color=["pool_new", "patient_nice"], wspace=0.5,show=True, size=10)
+plt.tight_layout()
+plt.savefig("POMS_B_UMAP_scvi.png",dpi=300)
+```
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(pom_b, color=["pct_counts_mt", "total_counts"], wspace=0.5,show=True, size=10)
+plt.tight_layout()
+plt.savefig("POMS_B_UMAP_QC.png",dpi=300)
+```
+
+
+```{python}
+ for res in [0.2,0.4,0.6,0.8,1]:
+    sc.tl.leiden(pom_b, key_added = "leiden_res_" + str(res), resolution = res)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(pom_b, color=["leiden_res_0.2", "leiden_res_0.4", "leiden_res_0.6", "leiden_res_0.8", "leiden_res_1"], wspace=0.5,show=True, size=10)
+plt.tight_layout()
+plt.savefig("POMS_B_UMAP_leiden_resolutions.png",dpi=300)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(pom_b, color=["CD19", "CD79A", "MS4A1", "CD38", "CD24", "CD27", "SPN", "IGHD", "IGHG2", "IGHA1"], wspace=0.5,show=True, size=10, layer="logcounts", ncols=5)
+plt.tight_layout()
+plt.savefig("POMS_B_UMAP_key_markers.png",dpi=300)
 ```
