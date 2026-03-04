@@ -1,0 +1,41 @@
+---
+title: "Untitled"
+format: html
+---
+```{python}
+import scanpy as sc
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import scvi
+import os
+import celltypist
+from celltypist import models
+import re
+import pertpy as pt
+import muon as mu
+import mudata as md
+import sys
+print(sys.executable)
+import torch
+import pandas as pd
+from plotnine import *
+from scipy.stats import f_oneway
+```
+
+```{python}
+# Must import this first
+import hdf5plugin  # automatically registers Zstd filter
+import anndata as ad
+
+# Path to your Zstd-compressed file
+path = r"C:\Users\dan_m\Desktop\POMS_local_datasets\POMS_rna_filt_poms1-34_2026-02-10.h5"
+
+# Read in backed mode
+adata = ad.read_h5ad(path, backed="r")
+
+print(adata)
+print(adata.shape)
+```
+
