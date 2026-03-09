@@ -37,5 +37,15 @@ adata = ad.read_h5ad(path, backed="r")
 
 print(adata)
 print(adata.shape)
+adata = adata.to_memory()
 ```
 
+```{python}
+np.random.seed(0)
+adata= adata[np.random.permutation(adata.n_obs), :]
+sc.pl.umap(adata,  color = ["gestation_fet", "poolID"], size=20)
+```
+
+```{python}
+adata.obs["poolID"].value_counts().to_frame(name="n_cells")
+```
