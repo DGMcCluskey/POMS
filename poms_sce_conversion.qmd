@@ -7,8 +7,13 @@ format: html
 ```{r}
 library(anndataR)
 library(SingleCellExperiment)
+library(qs2)
 ```
 ```{r}
 sce_obj <- read_h5ad("C:/Users/dan_m/Desktop/POMS_local_datasets/POMS_full.h5ad", as = "SingleCellExperiment")
 sce_obj
+```
+
+```{r}
+qs2::qs_save(sce_obj, file="C:/Users/dan_m/Desktop/POMS_local_datasets/poms_sce_object.qs")
 ```
