@@ -1,0 +1,14 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+library(anndataR)
+library(SingleCellExperiment)
+```
+```{r}
+sce_obj <- read_h5ad("C:/Users/dan_m/Desktop/POMS_local_datasets/POMS_full.h5ad", as = "SingleCellExperiment")
+sce_obj
+```

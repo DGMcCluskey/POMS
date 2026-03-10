@@ -38,14 +38,44 @@ adata = ad.read_h5ad(path, backed="r")
 print(adata)
 print(adata.shape)
 adata = adata.to_memory()
+adata.write_h5ad("POMS_full.h5ad")
 ```
 
 ```{python}
 np.random.seed(0)
-adata= adata[np.random.permutation(adata.n_obs), :]
-sc.pl.umap(adata,  color = ["gestation_fet", "poolID"], size=20)
+plt.figure()
+sc.pl.umap(adata,  color = ["gestation_fet", "poolID"], size=2, show=False)
+plt.savefig("poms_umap_pools.png", dpi=300)
 ```
 
 ```{python}
-adata.obs["poolID"].value_counts().to_frame(name="n_cells")
+cell_numbers=pd.crosstab(
+    adata.obs["poolID"],
+    adata.obs["patient_nice"], dropna=False
+)
+
+cell_numbers.to_csv("cell_numbers_sample_by_pool.csv")
+
+cell_numbers2=pd.crosstab(
+    adata.obs["gestation_fet"],
+    adata.obs["patient_nice"], dropna=False
+)
+
+cell_numbers2.to_csv("cell_numbers_sample_by_gestation.csv")
+```
+
+```{python}
+adata.obs["poolID"] = adata.obs["poolID"].cat.add_categories([
+    "pool_fetal17",
+    "pool_fetal20",
+    "pool_fetal56"
+])
+
+adata.obs.loc[adata.obs["patient_nice"]=="Fetal_17", "poolID"] = "pool_fetal17"
+adata.obs.loc[adata.obs["patient_nice"]=="Fetal_20", "poolID"] = "pool_fetal20"
+adata.obs.loc[adata.obs["patient_nice"]=="Fetal_56", "poolID"] = "pool_fetal56"
+```
+
+```{python}
+sc.pl.umap(adata,  color = ["gestation_fet", "poolID"], size=2, show=False, ncols=1)
 ```
