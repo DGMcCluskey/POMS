@@ -16,4 +16,6 @@ sce_obj
 
 ```{r}
 qs2::qs_save(sce_obj, file="C:/Users/dan_m/Desktop/POMS_local_datasets/poms_sce_object.qs")
+
+saveRDS(sce_obj, file="C:/Users/dan_m/Desktop/POMS_local_datasets/poms_sce_object.rds", compress=F)
 ```
