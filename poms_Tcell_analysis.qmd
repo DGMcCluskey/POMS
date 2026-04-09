@@ -1,0 +1,32 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{python}
+import scanpy as sc
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import scvi
+import os
+import celltypist
+from celltypist import models
+import re
+import pertpy as pt
+import muon as mu
+import mudata as md
+import sys
+print(sys.executable) 
+import torch
+import pandas as pd
+from plotnine import *
+from scipy.stats import f_oneway
+```
+
+```{python}
+adata = mu.read(filename = "Tcell_analysis/POMS_CITE_processed_4-5_Tcells.h5mu")
+adata
+(sys.getsizeof(adata) / (1024**3))
+```

@@ -17,7 +17,7 @@ import pertpy as pt
 import muon as mu
 import mudata as md
 import sys
-print(sys.executable)
+print(sys.executable) 
 import torch
 import pandas as pd
 from plotnine import *
